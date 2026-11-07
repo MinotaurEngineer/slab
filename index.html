@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Slab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: spec-sheet rows on white; sessions are a full-screen field of light. Same visual system as First Light. */
+:root {
+  --bg: #FFFFFF; --surface-2: #EEECE5; --ink: #000000; --muted: #6E6E6B; --line: #D8D7D2;
+  --accent: #000000; --accent-ink: #FFFFFF; --bad: #C5402E;
+  --font: "Inter Tight", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #000000; --surface-2: #171715; --ink: #FFFFFF; --muted: #8C8C88; --line: #2B2B29; --accent: #FFFFFF; --accent-ink: #000000; --bad: #E0614D; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #000000; --surface-2: #171715; --ink: #FFFFFF; --muted: #8C8C88; --line: #2B2B29; --accent: #FFFFFF; --accent-ink: #000000; --bad: #E0614D; color-scheme: dark; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+html, body { height: 100%; max-width: 100%; overflow-x: hidden; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.45 var(--font); letter-spacing: -0.005em; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+
+.screen { box-sizing: border-box; max-width: 1100px; margin: 0 auto; padding-block: 20px 48px;
+  padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 24px; animation: fade 250ms ease-out both; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+.topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.wordmark { margin: 0; font-weight: 600; font-size: clamp(3rem, 9vw, 6rem); line-height: 0.88; letter-spacing: -0.055em; }
+.h1 { margin: 0; font-weight: 500; text-transform: uppercase; font-size: clamp(2.2rem, 5vw, 3.6rem); line-height: 0.92; letter-spacing: -0.04em; }
+.label { font: 400 0.72rem/1.3 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: 0.85rem; }
+p { margin: 0; }
+.meta { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.meta .ver { color: var(--ink); }
+
+.nav { display: flex; gap: 4px; flex-wrap: wrap; padding-top: 8px; }
+.navlink { appearance: none; background: none; border: 0; border-bottom: 1px solid transparent; color: var(--ink); font: 500 0.95rem/1 var(--font); min-height: 44px; padding: 0 10px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: border-color 250ms ease-out; }
+.navlink:hover, .navlink:focus-visible { border-bottom-color: var(--ink); outline: none; }
+.icon { font-family: var(--mono); }
+
+.btn { appearance: none; border: 1px solid var(--ink); background: transparent; color: var(--ink); font: 500 0.95rem/1 var(--font); min-height: 52px; padding: 0 20px; border-radius: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 10px; transition: background-color 250ms ease-out, color 250ms ease-out, opacity 250ms ease-out; }
+.btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.btn-primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn-big { min-height: 64px; font-size: 1.05rem; padding: 0 32px; }
+.btn-quiet { border-color: transparent; color: var(--muted); padding: 0 8px; }
+.btn-danger { background: var(--bad); border-color: var(--bad); color: #FFFFFF; }
+.btn[disabled] { opacity: 0.35; cursor: default; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.spread { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+
+/* presets as spec rows */
+.rows { border-top: 1px solid var(--ink); }
+.preset { appearance: none; width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--ink); text-align: left; cursor: pointer;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) auto auto; gap: 20px; align-items: baseline; padding: 16px 0; font: inherit; transition: background-color 250ms ease-out; }
+.preset:hover, .preset:focus-visible { background: var(--surface-2); outline: none; }
+.preset .name { font-size: 1.25rem; font-weight: 500; letter-spacing: -0.015em; padding-left: 4px; }
+.preset .arrow { font-family: var(--mono); padding-right: 4px; }
+.swatch { display: inline-block; width: 10px; height: 10px; margin-right: 8px; vertical-align: 1px; }
+
+/* manual panel */
+.outputs { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: flex-end; border-top: 1px solid var(--ink); padding-top: 14px; }
+.outputs .outvol { flex: 1 1 220px; min-width: 0; }
+.outputs .outnote { align-self: center; }
+.panel { background: var(--surface-2); padding: 20px 22px; display: flex; flex-direction: column; gap: 18px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px 28px; }
+.field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.field .spread { gap: 8px; }
+.val { font: 500 1rem/1 var(--mono); }
+input[type="range"] { width: 100%; height: 36px; accent-color: var(--ink); margin: 0; }
+.seg { display: flex; flex-wrap: wrap; }
+.seg button { appearance: none; min-height: 46px; min-width: 46px; padding: 0 14px; margin-left: -1px; border: 1px solid var(--line); background: transparent; color: var(--ink); font: 500 0.95rem/1 var(--font); cursor: pointer; border-radius: 0; transition: background-color 250ms ease-out, color 250ms ease-out; }
+.seg button:first-child { margin-left: 0; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); position: relative; z-index: 1; }
+.seg button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.colors button { min-width: 0; padding: 0 12px; }
+
+/* rating */
+.rate { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
+.scale { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); }
+.scale button { min-width: 0; padding: 0; }
+.ends { display: flex; justify-content: space-between; }
+
+/* log */
+.table-wrap { overflow-x: auto; border-top: 1px solid var(--ink); }
+table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+th { text-align: left; font: 400 0.7rem/1.2 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td.num, th.r { text-align: right; }
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); background: var(--surface-2); }
+.summary > div { padding: 16px 20px; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.summary > div:last-child { border-right: 0; }
+.big { font: 500 1.5rem/1 var(--mono); }
+.confirm { background: var(--surface-2); padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; animation: fade 250ms ease-out both; }
+
+/* safety overlay */
+.overlay { position: fixed; inset: 0; z-index: 50; background: var(--bg); overflow-y: auto; animation: fade 250ms ease-out both; }
+.notes { border-top: 1px solid var(--ink); display: flex; flex-direction: column; }
+.notes > div { display: grid; grid-template-columns: minmax(0, 0.7fr) minmax(0, 2fr); gap: 24px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.notes h2 { margin: 0; font-size: 1.15rem; font-weight: 500; }
+
+/* session: the light field. Pulses are instant; only the 30 s fade-in and the end are gradual. */
+.session { position: fixed; inset: 0; z-index: 40; background: #000; cursor: none; touch-action: none; user-select: none; -webkit-user-select: none; }
+.session .light { position: absolute; inset: 0; opacity: 0; }
+.session .hud { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; padding: 16px max(20px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-bottom, 0px)); font: 400 0.72rem/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: #6A6A66; pointer-events: none; transition: opacity 1s ease-out; }
+.session .hud.dim { opacity: 0; }
+.session .tapnote { position: absolute; top: 45%; left: 0; right: 0; text-align: center; font: 500 1rem/1.4 var(--font); color: #8A8A86; pointer-events: none; transition: opacity 1s ease-out; }
+.session .tapnote.dim { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) { .screen, .overlay, .confirm { animation: none; } }
+@media (max-width: 700px) {
+  .preset { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .preset .desc { grid-column: 1 / -1; grid-row: 2; padding-left: 4px; }
+  .notes > div { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(function () {
+  'use strict';
+  const VERSION = '1.1.0';
+  const MAX_GAIN = 0.25;          /* app output ceiling, about -12 dB below full scale */
+  const MAX_MIN = 30;             /* session cap, minutes */
+  const LIGHT_FADE_IN = 30, AUDIO_FADE_IN = 10, FADE_OUT = 10;  /* seconds */
+
+  /* ---------- storage ---------- */
+  const P = 'slab.v1.';
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(P + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(P + k, JSON.stringify(v)); } catch (e) {} },
+    clear() { try { Object.keys(localStorage).filter(k => k.startsWith(P)).forEach(k => localStorage.removeItem(k)); } catch (e) {} }
+  };
+
+  /* ---------- helpers ---------- */
+  const app = document.getElementById('app');
+  function el(tag, attrs, kids) {
+    const n = document.createElement(tag);
+    if (attrs) for (const [k, v] of Object.entries(attrs)) {
+      if (v == null || v === false) continue;
+      if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v;
+      else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v === true ? '' : v);
+    }
+    (Array.isArray(kids) ? kids : kids == null ? [] : [kids]).forEach(c => { if (c != null && c !== false && c !== 0) n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return n;
+  }
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  const show = n => { app.replaceChildren(n); window.scrollTo(0, 0); };
+  const fmtHz = x => (Math.round(x * 10) / 10).toString();
+  function seg(id, opts, value, onChange, cls) {
+    const w = el('div', { class: 'seg ' + (cls || ''), role: 'group', id });
+    opts.forEach(([v, label, extra]) => {
+      const b = el('button', { type: 'button', 'aria-pressed': String(v === value) }, [extra || null, label]);
+      b.addEventListener('click', () => { w.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', 'false')); b.setAttribute('aria-pressed', 'true'); onChange(v); });
+      w.appendChild(b);
+    });
+    return w;
+  }
+  function slider(id, label, min, max, step, value, fmt, onInput) {
+    const out = el('span', { class: 'val', text: fmt(value) });
+    const r = el('input', { type: 'range', id, min, max, step, value, 'aria-label': label });
+    r.addEventListener('input', () => { out.textContent = fmt(+r.value); onInput(+r.value); });
+    return el('div', { class: 'field' }, [el('div', { class: 'spread' }, [el('span', { class: 'label', text: label }), out]), r]);
+  }
+
+  const COLORS = {
+    amber: ['Amber', '#FFA23A'], red: ['Red', '#FF3B22'], warm: ['Warm white', '#FFF1DC'],
+    cool: ['Cool white', '#EAF2FF'], blue: ['Blue', '#3D7BFF']
+  };
+  const PRESETS = [
+    { id: 'wind', name: 'Wind down', desc: 'Relaxed rhythm easing towards drowsy. Amber light, device brightness low. Before sleep.', f0: 10, f1: 4, min: 15, color: 'amber', tone: 180 },
+    { id: 'settle', name: 'Settle', desc: 'A steady 10 Hz, the brain’s relaxed-but-awake rhythm. Any time.', f0: 10, f1: 10, min: 10, color: 'warm', tone: 200 },
+    { id: 'prime', name: 'Prime', desc: 'Rising from relaxed to alert. Cool white light, device brightness up. Mornings.', f0: 10, f1: 15, min: 8, color: 'cool', tone: 240 },
+    { id: 'explore', name: 'Explore', desc: 'Eyes closed, tablet close. Watch your visual system draw patterns.', f0: 10, f1: 10, min: 10, color: 'warm', tone: 200, eyesClosed: true }
+  ];
+  const DEFAULT_MANUAL = { f0: 10, f1: 10, min: 10, tone: 200, color: 'amber' };
+  /* Output switches are global: they apply to every session, presets included, read at the moment you start. */
+  const outputs = () => Object.assign({ sound: true, light: true }, store.get('outputs', {}), { vol: store.get('volume', 40) });
+
+  /* ---------- engine (v1.1): the screen's frames are the clock ----------
+     Light: every flash is the full colour for exactly N frames, then pure black for N frames, so the
+     frequency is refresh / 2N (it snaps to what the screen can show cleanly). Frames are counted from
+     timestamps, so a late frame can't stretch the rhythm. Sound: each tone pulse is scheduled on the
+     audio clock at the predicted display time of its flash, so sound follows the light. */
+  function measureRefresh() {
+    return new Promise(resolve => {
+      const ts = []; const step = t => { ts.push(t); if (ts.length < 41) requestAnimationFrame(step); else {
+        const d = []; for (let i = 1; i < ts.length; i++) d.push(ts[i] - ts[i - 1]);
+        d.sort((a, b) => a - b); const med = d[d.length >> 1];
+        resolve(clamp(1000 / med, 24, 240));
+      } }; requestAnimationFrame(step);
+    });
+  }
+  const freqAtT = (c, t, dur) => c.f0 + (c.f1 - c.f0) * clamp(t / (dur * 0.8), 0, 1);  /* reach target by 80% */
+  function snapHz(hz, R) { const N = Math.max(1, Math.round(R / (2 * hz))); return { N, hz: R / (2 * N) }; }
+  function buildPlan(c, R, dur) {
+    const cycles = [], total = Math.round(dur * R); let F = 0;
+    while (F < total) { const { N } = snapHz(freqAtT(c, F / R, dur), R); cycles.push({ F, N }); F += 2 * N; }
+    return { cycles, total };
+  }
+
+  const Engine = (() => {
+    let ctx, osc, pulseGain, master, raf, cfg, running = false, wake = null, onEnd, els;
+    let R, P, plan, dur, fi, lastTs, k, schedK, offset, lastKey, dropped, flashes, prevOn, firstTs, test, firstOn, lastOn;
+    function schedulePulse(at, on) {
+      const ramp = Math.min(0.005, on * 0.2);
+      pulseGain.gain.setValueAtTime(0, at);
+      pulseGain.gain.linearRampToValueAtTime(1, at + ramp);
+      pulseGain.gain.setValueAtTime(1, at + on - ramp);
+      pulseGain.gain.linearRampToValueAtTime(0, at + on);
+    }
+    function frame(ts) {
+      if (!running) return;
+      if (lastTs == null) { lastTs = ts; firstTs = ts; fi = 0; }
+      else {
+        const d = ts - lastTs, steps = Math.max(1, Math.round(d / P));
+        if (steps > 1) dropped += steps - 1;
+        if (steps === 1) P += (d - P) * 0.02;            /* track the real refresh slowly */
+        fi += steps; lastTs = ts;
+      }
+      if (fi >= plan.total) return stop(true);
+      const cy = plan.cycles;
+      while (k + 1 < cy.length && cy[k + 1].F <= fi) k++;
+      const c = cy[k], on = cfg.light && (fi - c.F) < c.N;
+      const tS = fi / R;
+      const env = test ? 1 : (0.3 + 0.7 * clamp(tS / LIGHT_FADE_IN, 0, 1)) * clamp((dur - tS) / FADE_OUT, 0, 1);
+      const key = on ? Math.round(env * 100) : -1;
+      if (key !== lastKey) { els.light.style.opacity = on ? String(env) : '0'; lastKey = key; }
+      if (on && !prevOn) { flashes++; if (firstOn == null) firstOn = ts; lastOn = ts; }
+      prevOn = on;
+      /* sound: schedule each pulse at the predicted display time of its flash, up to 0.5 s ahead */
+      if (ctx) {
+        const o = ctx.currentTime - ts / 1000;
+        offset = offset == null ? o : offset + (o - offset) * 0.05;
+        const lead = (ctx.outputLatency || 0) + (ctx.baseLatency || 0) + store.get('lightDelay', 0) / 1000;
+        while (schedK < cy.length) {
+          const s = cy[schedK], disp = (ts + (s.F - fi) * P) / 1000, at = disp + offset - lead;
+          if (at > ctx.currentTime + 0.5) break;
+          if (at > ctx.currentTime + 0.003 && cfg.sound) schedulePulse(at, s.N / R);
+          schedK++;
+        }
+      }
+      if (els.time) {
+        const left = Math.max(0, dur - tS);
+        els.time.textContent = Math.floor(left / 60) + ':' + String(Math.floor(left % 60)).padStart(2, '0');
+        els.hz.textContent = fmtHz(R / (2 * c.N)) + ' Hz · ' + c.N + '+' + c.N + ' frames';
+      }
+      raf = requestAnimationFrame(frame);
+    }
+    async function start(c, e, done, opts) {
+      cfg = c; els = e; onEnd = done; test = !!(opts && opts.test);
+      if (!test) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        ctx = new AC({ latencyHint: 'interactive' });           /* created inside the tap, as iOS requires */
+        if (ctx.state === 'suspended') ctx.resume();
+        osc = ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = cfg.tone;
+        pulseGain = ctx.createGain(); pulseGain.gain.value = 0;
+        master = ctx.createGain(); master.gain.value = 0;
+        osc.connect(pulseGain).connect(master).connect(ctx.destination);
+        osc.start();
+      } else ctx = null;
+      running = true;
+      R = await measureRefresh(); P = 1000 / R;
+      if (!running) return;
+      dur = cfg.min * 60; plan = buildPlan(cfg, R, dur);
+      fi = 0; lastTs = null; k = 0; schedK = 0; offset = null; lastKey = null; dropped = 0; flashes = 0; prevOn = false; firstOn = lastOn = null;
+      if (ctx) {
+        const t0 = ctx.currentTime + 0.05, vol = cfg.sound ? MAX_GAIN * (cfg.vol / 100) : 0;
+        const fadeIn = Math.min(AUDIO_FADE_IN, dur / 3), fadeOut = Math.min(FADE_OUT, dur / 3);
+        master.gain.setValueAtTime(0, t0);
+        master.gain.linearRampToValueAtTime(vol, t0 + fadeIn);
+        master.gain.setValueAtTime(vol, t0 + dur - fadeOut);
+        master.gain.linearRampToValueAtTime(0, t0 + dur);
+      }
+      try { if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then(w => { wake = w; }).catch(() => {}); } catch (err) {}
+      raf = requestAnimationFrame(frame);
+    }
+    function stop(completed) {
+      if (!running) return;
+      running = false;
+      cancelAnimationFrame(raf);
+      const elapsedS = lastTs != null ? (lastTs - firstTs) / 1000 : 0;
+      if (ctx) {
+        try { master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(0, ctx.currentTime, 0.03); pulseGain.gain.cancelScheduledValues(ctx.currentTime + 0.1); } catch (err) {}
+        const c = ctx, o = osc; setTimeout(() => { try { o.stop(); c.close(); } catch (err) {} }, 250);
+      }
+      if (els && els.light) els.light.style.opacity = '0';
+      try { if (wake) wake.release(); } catch (err) {} wake = null;
+      const doneFrames = Math.min(fi || 0, plan ? plan.total : 0);
+      onEnd && onEnd({
+        completed: !!completed, minutes: Math.round((doneFrames / (R || 60)) / 6) / 10,
+        endHz: R && plan ? R / (2 * plan.cycles[Math.min(k || 0, plan.cycles.length - 1)].N) : cfg.f1,
+        refresh: R, dropped: dropped || 0, flashes: flashes || 0, elapsedS,
+        measuredHz: flashes > 1 && lastOn > firstOn ? (flashes - 1) / ((lastOn - firstOn) / 1000) : 0
+      });
+    }
+    return { start, stop, isRunning: () => running };
+  })();
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && Engine.isRunning()) Engine.stop(false); });
+
+  /* ---------- screens ---------- */
+  let screenHz = null;
+  measureRefresh().then(r => { screenHz = r; const n = document.getElementById('screen-hz'); if (n) n.textContent = 'Screen ' + Math.round(r) + ' Hz'; });
+  const snapText = hz => screenHz ? fmtHz(snapHz(hz, screenHz).hz) : fmtHz(hz);
+  function navLink(icon, label, onclick) { return el('button', { class: 'navlink', type: 'button', onclick }, [el('span', { class: 'icon', 'aria-hidden': 'true', text: icon }), label]); }
+  function header() {
+    return el('header', { class: 'topbar' }, [
+      el('h1', { class: 'wordmark', text: 'Slab' }),
+      el('nav', { class: 'nav', 'aria-label': 'Main' }, [navLink('◐', 'Flicker test', flickerTest), navLink('↺', 'Log', logScreen), navLink('⚙︎', 'Settings', settings)])
+    ]);
+  }
+
+  function home() {
+    if (!store.get('acknowledged', false)) return safety(true);
+    const manual = Object.assign({}, DEFAULT_MANUAL, store.get('manual', {}));
+    const sessions = store.get('log', []);
+    const startWith = cfg => { const o = outputs(); if (!o.sound && !o.light) { offNote.hidden = false; return; } before(Object.assign({}, cfg, o)); };
+    const offNote = el('p', { class: 'small', hidden: true, text: 'Sound and light are both off. Switch at least one on to start a session.' });
+    const out = outputs();
+    const setOut = (k, v) => { const o = Object.assign({ sound: true, light: true }, store.get('outputs', {})); o[k] = v; store.set('outputs', o); offNote.hidden = true; };
+    const presetRow = p => el('button', { class: 'preset', type: 'button', onclick: () => startWith(p) }, [
+      el('span', { class: 'name', text: p.name }),
+      el('span', { class: 'desc muted small', text: p.desc }),
+      el('span', { class: 'num small' }, [el('i', { class: 'swatch', style: 'background:' + COLORS[p.color][1] }), (p.f0 === p.f1 ? p.f0 : p.f0 + '→' + p.f1) + ' Hz · ' + p.min + ':00']),
+      el('span', { class: 'arrow', 'aria-hidden': 'true', text: '→' })
+    ]);
+    const set = (k, v) => { manual[k] = v; store.set('manual', manual); };
+    show(el('main', { class: 'screen' }, [
+      header(),
+      el('div', { class: 'meta' }, [
+        el('span', { class: 'label', id: 'screen-hz', text: screenHz ? 'Screen ' + Math.round(screenHz) + ' Hz' : 'Measuring screen…' }),
+        el('span', { class: 'label', text: sessions.length ? sessions.length + ' sessions logged' : 'No sessions yet' }),
+        el('span', { class: 'label ver', text: 'v' + VERSION })
+      ]),
+      el('section', { class: 'outputs' }, [
+        el('div', { class: 'field' }, [el('span', { class: 'label', text: 'Sound' }), seg('g-sound', [[true, 'On'], [false, 'Off']], out.sound, v => setOut('sound', v))]),
+        el('div', { class: 'field' }, [el('span', { class: 'label', text: 'Light' }), seg('g-light', [[true, 'On'], [false, 'Off']], out.light, v => setOut('light', v))]),
+        el('div', { class: 'outvol' }, [slider('g-vol', 'Volume', 0, 100, 5, out.vol, v => v + '%', v => store.set('volume', v))]),
+        el('span', { class: 'small muted outnote', text: 'Applies to every session.' })
+      ]),
+      offNote,
+      el('section', { class: 'rows' }, PRESETS.map(presetRow)),
+      el('section', { class: 'panel' }, [
+        el('div', { class: 'spread' }, [el('span', { class: 'label', text: 'Manual' }), el('span', { class: 'small muted', text: 'Frequencies snap to what your screen can flash cleanly. Set brightness with your device.' })]),
+        el('div', { class: 'grid' }, [
+          slider('m-f0', 'Pulse start', 1, 40, 0.5, manual.f0, v => fmtHz(v) + ' Hz', v => set('f0', v)),
+          slider('m-f1', 'Pulse end', 1, 40, 0.5, manual.f1, v => fmtHz(v) + ' Hz', v => set('f1', v)),
+          slider('m-min', 'Length', 1, MAX_MIN, 1, manual.min, v => v + ':00', v => set('min', v)),
+          slider('m-tone', 'Tone pitch', 100, 500, 10, manual.tone, v => v + ' Hz', v => set('tone', v))
+        ]),
+        el('div', { class: 'field' }, [el('span', { class: 'label', text: 'Light colour' }),
+          seg('m-color', Object.entries(COLORS).map(([k, [n, c]]) => [k, n, el('i', { class: 'swatch', style: 'background:' + c })]), manual.color, v => set('color', v), 'colors')]),
+        el('div', { class: 'row' }, [el('button', { class: 'btn btn-primary btn-big', type: 'button', onclick: () => { const m = Object.assign({}, manual); delete m.sound; delete m.light; delete m.vol; startWith(Object.assign({ id: 'manual', name: 'Manual' }, m)); } }, ['Start manual', el('span', { class: 'icon', text: '→' })])])
+      ])
+    ]));
+  }
+
+  function ratings(state) {
+    const r = (key, label, lo, hi) => el('div', { class: 'rate' }, [
+      el('span', { class: 'label', text: label }),
+      seg('r-' + key, Array.from({ length: 9 }, (_, i) => [i + 1, String(i + 1)]), state[key], v => { state[key] = v; state.onChange && state.onChange(); }, 'scale'),
+      el('div', { class: 'ends small muted' }, [el('span', { text: '← ' + lo }), el('span', { text: hi + ' →' })])
+    ]);
+    return [r('calm', 'How calm are you?', 'tense', 'deeply calm'), r('alert', 'How alert are you?', 'drowsy', 'sharp')];
+  }
+
+  function before(cfg) {
+    const st = { calm: null, alert: null };
+    const go = el('button', { class: 'btn btn-primary btn-big', type: 'button', disabled: true }, ['Begin', el('span', { class: 'icon', text: '→' })]);
+    st.onChange = () => { go.disabled = !(st.calm && st.alert); };
+    go.addEventListener('click', () => session(cfg, { calm: st.calm, alert: st.alert }));
+    const hz = cfg.f0 === cfg.f1 ? snapText(cfg.f0) + ' Hz' : snapText(cfg.f0) + ' → ' + snapText(cfg.f1) + ' Hz';
+    show(el('main', { class: 'screen' }, [
+      el('div', { class: 'spread' }, [el('h1', { class: 'h1', text: cfg.name }), el('button', { class: 'btn btn-quiet', type: 'button', text: '← Back', onclick: home })]),
+      el('p', { class: 'num muted', text: hz + ' · ' + cfg.min + ':00 · ' + COLORS[cfg.color][0].toLowerCase() + ' · tone ' + cfg.tone + ' Hz' + (cfg.sound === false ? ' · sound off' : '') + (cfg.light === false ? ' · light off' : '') }),
+      el('p', { text: cfg.eyesClosed
+        ? 'Headphones in. Hold the tablet 20–30 cm from your face, close your eyes and let the light play on your eyelids. Tap anywhere to stop.'
+        : 'Headphones in, device brightness where you want it. Rest your eyes on the screen with a soft focus, or close them; light reaches you through your eyelids. Tap anywhere to stop.' }),
+      el('p', { class: 'small muted', text: 'First, a quick reading. You’ll rate again afterwards, so the log shows what each session actually did.' }),
+      ...ratings(st),
+      el('div', { class: 'row' }, [go])
+    ]));
+  }
+
+  function session(cfg, pre) {
+    const light = el('div', { class: 'light', style: 'background:' + COLORS[cfg.color][1] });
+    const time = el('span'), hz = el('span');
+    const hud = el('div', { class: 'hud' }, [time, hz]);
+    const note = el('div', { class: 'tapnote', text: 'Tap anywhere to stop' });
+    const root = el('div', { class: 'session', role: 'application', 'aria-label': 'Session running. Tap anywhere to stop.' }, [light, note, hud]);
+    document.body.appendChild(root);
+    setTimeout(() => { hud.classList.add('dim'); note.classList.add('dim'); }, 4000);
+    const finish = res => {
+      root.removeEventListener('pointerdown', tapStop);
+      root.remove();
+      after(cfg, pre, res);
+    };
+    const tapStop = e => { e.preventDefault(); Engine.stop(false); };
+    root.addEventListener('pointerdown', tapStop);
+    root.addEventListener('touchstart', e => e.preventDefault(), { passive: false });  /* no ghost click onto the next screen */
+    Engine.start(cfg, { light, time, hz }, finish);
+  }
+
+  function after(cfg, pre, res) {
+    const st = { calm: null, alert: null };
+    const save = el('button', { class: 'btn btn-primary btn-big', type: 'button', disabled: true }, ['Save to log', el('span', { class: 'icon', text: '→' })]);
+    st.onChange = () => { save.disabled = !(st.calm && st.alert); };
+    const entry = () => ({ at: new Date().toISOString(), preset: cfg.id, name: cfg.name, f0: cfg.f0, f1: cfg.f1, color: cfg.color, planned: cfg.min, minutes: res.minutes, completed: res.completed, refresh: Math.round(res.refresh || 0), dropped: res.dropped, pre, post: { calm: st.calm, alert: st.alert } });
+    save.addEventListener('click', () => { const log = store.get('log', []); log.push(entry()); store.set('log', log); logScreen(); });
+    show(el('main', { class: 'screen' }, [
+      el('h1', { class: 'h1', text: res.completed ? 'Complete' : 'Stopped' }),
+      el('p', { class: 'num muted', text: res.minutes + ' of ' + cfg.min + ' min · ended at ' + fmtHz(res.endHz) + ' Hz' }),
+      el('p', { class: 'small muted', text: 'Rate now, before the effect fades or your mind wanders off.' }),
+      ...ratings(st),
+      el('div', { class: 'row' }, [save, el('button', { class: 'btn btn-quiet', type: 'button', text: 'Discard', onclick: home })])
+    ]));
+  }
+
+  function logScreen() {
+    const log = store.get('log', []);
+    const d = (e, k) => (e.post && e.pre && e.post[k] != null && e.pre[k] != null) ? e.post[k] - e.pre[k] : null;
+    const sign = v => v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(Math.round(v * 10) / 10);
+    const by = {};
+    log.forEach(e => { (by[e.name] = by[e.name] || []).push(e); });
+    const mean = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
+    const confirmBox = el('div', { class: 'confirm', hidden: true }, [
+      el('p', { text: 'This deletes every logged session on this tablet. It can’t be undone.' }),
+      el('div', { class: 'row' }, [el('button', { class: 'btn', type: 'button', text: 'Cancel', onclick: () => { confirmBox.hidden = true; } }),
+        el('button', { class: 'btn btn-danger', type: 'button', text: 'Delete log', onclick: () => { store.set('log', []); logScreen(); } })])
+    ]);
+    show(el('main', { class: 'screen' }, [
+      el('div', { class: 'spread' }, [el('h1', { class: 'h1', text: 'Log' }), el('button', { class: 'btn btn-quiet', type: 'button', text: '← Back', onclick: home })]),
+      log.length ? el('section', { class: 'summary' }, Object.entries(by).map(([name, es]) => el('div', {}, [
+        el('span', { class: 'label', text: name + ' · ' + es.length + (es.length === 1 ? ' session' : ' sessions') }),
+        el('span', { class: 'big', text: 'calm ' + sign(mean(es.map(e => d(e, 'calm')).filter(v => v != null))) }),
+        el('span', { class: 'num muted small', text: 'alert ' + sign(mean(es.map(e => d(e, 'alert')).filter(v => v != null))) + ' · average change' })
+      ]))) : el('p', { class: 'muted', text: 'No sessions yet. Each session logs how calm and alert you were before and after, so over time you can see what each one actually does for you.' }),
+      log.length && el('div', { class: 'table-wrap' }, [el('table', {}, [
+        el('thead', {}, [el('tr', {}, ['When', 'Session', 'Pulse', 'Minutes', 'Calm', 'Alert'].map((h, i) => el('th', { class: i > 2 ? 'r' : null, text: h })))]),
+        el('tbody', {}, [...log].reverse().map(e => el('tr', {}, [
+          el('td', { class: 'num', text: new Date(e.at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) }),
+          el('td', { text: e.name + (e.completed ? '' : ' (stopped)') }),
+          el('td', { class: 'num', text: (e.f0 === e.f1 ? fmtHz(e.f0) : fmtHz(e.f0) + '→' + fmtHz(e.f1)) + ' Hz' }),
+          el('td', { class: 'num', text: String(e.minutes) }),
+          el('td', { class: 'num', text: e.pre.calm + '→' + e.post.calm + '  ' + sign(d(e, 'calm')) }),
+          el('td', { class: 'num', text: e.pre.alert + '→' + e.post.alert + '  ' + sign(d(e, 'alert')) })
+        ])))
+      ])]),
+      log.length && el('div', {}, [el('button', { class: 'btn btn-quiet', type: 'button', text: 'Delete log', onclick: () => { confirmBox.hidden = false; } })]),
+      confirmBox
+    ]));
+  }
+
+  function settings() {
+    const delay = store.get('lightDelay', 0);
+    show(el('main', { class: 'screen' }, [
+      el('div', { class: 'spread' }, [el('h1', { class: 'h1', text: 'Settings' }), el('button', { class: 'btn btn-quiet', type: 'button', text: '← Back', onclick: home })]),
+      el('section', { class: 'panel' }, [
+        slider('s-delay', 'Light delay', 0, 300, 10, delay, v => v + ' ms', v => store.set('lightDelay', v)),
+        el('p', { class: 'small muted', text: 'Bluetooth headphones play sound a fraction of a second late. If the flash comes before the tone, raise this until they land together. Wired headphones: leave at 0.' })
+      ]),
+      el('div', { class: 'row' }, [el('button', { class: 'btn', type: 'button', text: 'Read the safety notes', onclick: () => safety(false) })]),
+      el('p', { class: 'small muted', text: 'Slab v' + VERSION + '. Everything stays on this tablet.' })
+    ]));
+  }
+
+  function safety(first) {
+    const note = (t, b) => el('div', {}, [el('h2', { text: t }), el('p', { class: 'muted', text: b })]);
+    show(el('main', { class: 'screen' }, [
+      el('h1', { class: 'h1', text: 'Before you start' }),
+      el('section', { class: 'notes' }, [
+        note('Hearing', 'Slab caps its own output at about a quarter of full scale and fades sound in over ten seconds. It can’t see your device volume, so set a hard ceiling: Settings → Sounds → Headphone Safety → Reduce Loud Audio, at 85 dB. Start with device volume around half.'),
+        note('Flicker', 'Flashing light between about 3 and 30 flashes per second can trigger seizures in people with photosensitivity, sometimes for the first time. Light fades in over 30 seconds. Stop if you feel strange, see unusual patterns that bother you, or get a headache.'),
+        note('Eyes', 'A tablet screen is far too dim to harm your eyes, even close up. Eyes closed is gentler and works well; light reaches you through your eyelids.'),
+        note('Stopping', 'Tap anywhere on the screen and everything stops at once. Leaving the app stops it too. Sessions are capped at 30 minutes.'),
+        note('Not for', 'Don’t use while driving, operating anything, or in water.')
+      ]),
+      el('div', { class: 'row' }, [el('button', { class: 'btn btn-primary btn-big', type: 'button', onclick: () => { store.set('acknowledged', true); home(); } }, [first ? 'Understood' : 'Done', el('span', { class: 'icon', text: '→' })])])
+    ]));
+  }
+
+  /* Flicker test: light only, 10 s, then the real numbers. Nothing is logged. */
+  function flickerTest(prev) {
+    const st = Object.assign({ hz: 10, color: 'warm' }, prev ? prev.sel : {});
+    const R0 = screenHz;
+    const plan = el('p', { class: 'num' });
+    const describe = () => {
+      if (!screenHz) { plan.textContent = 'Measuring screen…'; return; }
+      const { N, hz } = snapHz(st.hz, screenHz);
+      plan.textContent = 'Screen ' + fmtHz(screenHz) + ' Hz → ' + N + ' frames on, ' + N + ' off → ' + fmtHz(hz) + ' Hz';
+    };
+    if (!R0) measureRefresh().then(r => { screenHz = r; describe(); });
+    describe();
+    const result = prev && prev.res ? (() => {
+      const r = prev.res, target = r.refresh / (2 * snapHz(st.hz, r.refresh).N);
+      const err = target ? Math.abs(r.measuredHz - target) / target : 1;
+      const clean = r.dropped === 0 && err < 0.03;
+      const line = (k, v) => el('div', {}, [el('span', { class: 'label', text: k }), el('span', { class: 'big', text: v })]);
+      return el('section', { class: 'summary' }, [
+        line('Verdict', clean ? 'Clean' : r.dropped ? 'Frames dropped' : 'Off target'),
+        line('Target', fmtHz(target) + ' Hz'),
+        line('Measured', (Math.round(r.measuredHz * 100) / 100) + ' Hz'),
+        line('Dropped frames', String(r.dropped)),
+        line('Flashes', r.flashes + ' in ' + (Math.round(r.elapsedS * 10) / 10) + ' s')
+      ]);
+    })() : null;
+    const start = () => {
+      const light = el('div', { class: 'light', style: 'background:' + COLORS[st.color][1] });
+      const note = el('div', { class: 'tapnote', text: 'Ten seconds · tap to stop' });
+      const root = el('div', { class: 'session', role: 'application', 'aria-label': 'Flicker test running. Tap anywhere to stop.' }, [light, note]);
+      document.body.appendChild(root);
+      setTimeout(() => note.classList.add('dim'), 2000);
+      const tapStop = e => { e.preventDefault(); Engine.stop(false); };
+      root.addEventListener('pointerdown', tapStop);
+      root.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+      Engine.start({ f0: st.hz, f1: st.hz, min: 10 / 60, color: st.color, light: true, sound: false }, { light }, res => {
+        root.remove(); flickerTest({ sel: { hz: st.hz, color: st.color }, res });
+      }, { test: true });
+    };
+    show(el('main', { class: 'screen' }, [
+      el('div', { class: 'spread' }, [el('h1', { class: 'h1', text: 'Flicker test' }), el('button', { class: 'btn btn-quiet', type: 'button', text: '← Back', onclick: home })]),
+      el('p', { class: 'muted', text: 'Ten seconds of light only, full colour on, pure black off. Afterwards you get the measured rate and any dropped frames, so you can check the flicker is clean on this screen.' }),
+      el('div', { class: 'field' }, [el('span', { class: 'label', text: 'Frequency' }),
+        seg('t-hz', [5, 7.5, 10, 12, 15, 20].map(h => [h, fmtHz(h) + ' Hz']), st.hz, v => { st.hz = v; describe(); })]),
+      el('div', { class: 'field' }, [el('span', { class: 'label', text: 'Colour' }),
+        seg('t-color', Object.entries(COLORS).map(([k, [n, c]]) => [k, n, el('i', { class: 'swatch', style: 'background:' + c })]), st.color, v => { st.color = v; }, 'colors')]),
+      plan,
+      el('div', { class: 'row' }, [el('button', { class: 'btn btn-primary btn-big', type: 'button', onclick: start }, [result ? 'Run again' : 'Start test', el('span', { class: 'icon', text: '→' })])]),
+      result
+    ]));
+  }
+
+  window.Slab = { Engine, PRESETS, version: VERSION, store, snapHz, buildPlan, measureRefresh };
+  home();
+})();
+</script>
+</body>
+</html>
