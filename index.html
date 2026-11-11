@@ -64,6 +64,8 @@ p { margin: 0; }
 .preset:hover, .preset:focus-visible { background: var(--surface-2); outline: none; }
 .preset .name { font-size: 1.25rem; font-weight: 500; letter-spacing: -0.015em; padding-left: 4px; }
 .preset .arrow { font-family: var(--mono); padding-right: 4px; }
+.preset.lead { border-bottom: 1px solid var(--ink); }
+.preset.lead .name { font-weight: 600; }
 .swatch { display: inline-block; width: 10px; height: 10px; margin-right: 8px; vertical-align: 1px; }
 
 /* manual panel */
@@ -76,17 +78,21 @@ p { margin: 0; }
 .field .spread { gap: 8px; }
 .val { font: 500 1rem/1 var(--mono); }
 input[type="range"] { width: 100%; height: 36px; accent-color: var(--ink); margin: 0; }
+input[type="text"] { box-sizing: border-box; width: 100%; min-height: 48px; padding: 0 12px; border: 1px solid var(--line); border-radius: 0; background: var(--bg); color: var(--ink); font: 400 1rem/1 var(--font); }
+input[type="text"]:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .seg { display: flex; flex-wrap: wrap; }
 .seg button { appearance: none; min-height: 46px; min-width: 46px; padding: 0 14px; margin-left: -1px; border: 1px solid var(--line); background: transparent; color: var(--ink); font: 500 0.95rem/1 var(--font); cursor: pointer; border-radius: 0; transition: background-color 250ms ease-out, color 250ms ease-out; }
 .seg button:first-child { margin-left: 0; }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); position: relative; z-index: 1; }
 .seg button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .colors button { min-width: 0; padding: 0 12px; }
+.steps { font: 400 0.8rem/1.6 var(--mono); color: var(--muted); word-break: break-word; }
 
 /* rating */
 .rate { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
 .scale { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); }
-.scale button { min-width: 0; padding: 0; }
+.scale5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.scale button, .scale5 button { min-width: 0; padding: 0; }
 .ends { display: flex; justify-content: space-between; }
 
 /* log */
@@ -94,11 +100,13 @@ input[type="range"] { width: 100%; height: 36px; accent-color: var(--ink); margi
 table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
 th { text-align: left; font: 400 0.7rem/1.2 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
 td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td.wrap { white-space: normal; min-width: 160px; }
 td.num, th.r { text-align: right; }
 .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); background: var(--surface-2); }
 .summary > div { padding: 16px 20px; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
 .summary > div:last-child { border-right: 0; }
 .big { font: 500 1.5rem/1 var(--mono); }
+.huge { font: 500 clamp(3rem, 10vw, 5.5rem)/0.9 var(--mono); letter-spacing: -0.04em; }
 .confirm { background: var(--surface-2); padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; animation: fade 250ms ease-out both; }
 
 /* safety overlay */
@@ -107,7 +115,7 @@ td.num, th.r { text-align: right; }
 .notes > div { display: grid; grid-template-columns: minmax(0, 0.7fr) minmax(0, 2fr); gap: 24px; padding: 16px 0; border-bottom: 1px solid var(--line); }
 .notes h2 { margin: 0; font-size: 1.15rem; font-weight: 500; }
 
-/* session: the light field. Pulses are instant; only the 30 s fade-in and the end are gradual. */
+/* session: the light field. Square pulses are instant; sine is a smooth swell. */
 .session { position: fixed; inset: 0; z-index: 40; background: #000; cursor: none; touch-action: none; user-select: none; -webkit-user-select: none; }
 .session .light { position: absolute; inset: 0; opacity: 0; }
 .session .hud { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; padding: 16px max(20px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-bottom, 0px)); font: 400 0.72rem/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: #6A6A66; pointer-events: none; transition: opacity 1s ease-out; }
@@ -128,7 +136,7 @@ td.num, th.r { text-align: right; }
 <script>
 (function () {
   'use strict';
-  const VERSION = '1.1.0';
+  const VERSION = '1.2.0';
   const MAX_GAIN = 0.25;          /* app output ceiling, about -12 dB below full scale */
   const MAX_MIN = 30;             /* session cap, minutes */
   const LIGHT_FADE_IN = 30, AUDIO_FADE_IN = 10, FADE_OUT = 10;  /* seconds */
@@ -156,6 +164,7 @@ td.num, th.r { text-align: right; }
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const show = n => { app.replaceChildren(n); window.scrollTo(0, 0); };
   const fmtHz = x => (Math.round(x * 10) / 10).toString();
+  const fmtTime = s => Math.floor(s / 60) + ':' + String(Math.round(s % 60)).padStart(2, '0');
   function seg(id, opts, value, onChange, cls) {
     const w = el('div', { class: 'seg ' + (cls || ''), role: 'group', id });
     opts.forEach(([v, label, extra]) => {
@@ -171,26 +180,30 @@ td.num, th.r { text-align: right; }
     r.addEventListener('input', () => { out.textContent = fmt(+r.value); onInput(+r.value); });
     return el('div', { class: 'field' }, [el('div', { class: 'spread' }, [el('span', { class: 'label', text: label }), out]), r]);
   }
+  const median = a => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 
   const COLORS = {
-    amber: ['Amber', '#FFA23A'], red: ['Red', '#FF3B22'], warm: ['Warm white', '#FFF1DC'],
+    red: ['Red', '#FF3B22'], amber: ['Amber', '#FFA23A'], warm: ['Warm white', '#FFF1DC'],
     cool: ['Cool white', '#EAF2FF'], blue: ['Blue', '#3D7BFF']
   };
+  const WAVES = [['square', 'Square'], ['sine', 'Sine']];
   const PRESETS = [
     { id: 'wind', name: 'Wind down', desc: 'Relaxed rhythm easing towards drowsy. Amber light, device brightness low. Before sleep.', f0: 10, f1: 4, min: 15, color: 'amber', tone: 180 },
     { id: 'settle', name: 'Settle', desc: 'A steady 10 Hz, the brain’s relaxed-but-awake rhythm. Any time.', f0: 10, f1: 10, min: 10, color: 'warm', tone: 200 },
     { id: 'prime', name: 'Prime', desc: 'Rising from relaxed to alert. Cool white light, device brightness up. Mornings.', f0: 10, f1: 15, min: 8, color: 'cool', tone: 240 },
-    { id: 'explore', name: 'Explore', desc: 'Eyes closed, tablet close. Watch your visual system draw patterns.', f0: 10, f1: 10, min: 10, color: 'warm', tone: 200, eyesClosed: true }
+    { id: 'explore', name: 'Explore', desc: 'Eyes closed, tablet close. Watch your visual system draw patterns.', f0: 10, f1: 10, min: 10, color: 'red', tone: 200, eyesClosed: true }
   ];
-  const DEFAULT_MANUAL = { f0: 10, f1: 10, min: 10, tone: 200, color: 'amber' };
+  const DEFAULT_MANUAL = { f0: 10, f1: 10, min: 10, tone: 200, color: 'red' };
   /* Output switches are global: they apply to every session, presets included, read at the moment you start. */
   const outputs = () => Object.assign({ sound: true, light: true }, store.get('outputs', {}), { vol: store.get('volume', 40) });
 
-  /* ---------- engine (v1.1): the screen's frames are the clock ----------
-     Light: every flash is the full colour for exactly N frames, then pure black for N frames, so the
-     frequency is refresh / 2N (it snaps to what the screen can show cleanly). Frames are counted from
-     timestamps, so a late frame can't stretch the rhythm. Sound: each tone pulse is scheduled on the
-     audio clock at the predicted display time of its flash, so sound follows the light. */
+  /* ---------- engine (v1.2): the screen's frames are the clock ----------
+     Square: each cycle is L frames, the first ceil(L/2) full colour, the rest pure black, so the
+     frequency is refresh / L (any whole number of frames, so twice the choices of v1.1's 2N).
+     Sine: brightness follows a smooth cosine at any frequency, computed per frame from elapsed frames.
+     Frames are counted from timestamps, so a late frame can't stretch the rhythm. Square sound pulses are
+     scheduled on the audio clock at the predicted display time of each flash; sine sound is a drone whose
+     loudness swells at the same frequency. */
   function measureRefresh() {
     return new Promise(resolve => {
       const ts = []; const step = t => { ts.push(t); if (ts.length < 41) requestAnimationFrame(step); else {
@@ -200,17 +213,21 @@ td.num, th.r { text-align: right; }
       } }; requestAnimationFrame(step);
     });
   }
-  const freqAtT = (c, t, dur) => c.f0 + (c.f1 - c.f0) * clamp(t / (dur * 0.8), 0, 1);  /* reach target by 80% */
-  function snapHz(hz, R) { const N = Math.max(1, Math.round(R / (2 * hz))); return { N, hz: R / (2 * N) }; }
+  function freqAtT(c, t, dur) {
+    if (c.steps) return c.steps[clamp(Math.floor(t / c.hold), 0, c.steps.length - 1)];
+    return c.f0 + (c.f1 - c.f0) * clamp(t / (dur * 0.8), 0, 1);   /* ramps reach target by 80% */
+  }
+  function snapHz(hz, R) { const L = Math.max(2, Math.round(R / hz)); return { L, on: Math.ceil(L / 2), hz: R / L }; }
   function buildPlan(c, R, dur) {
     const cycles = [], total = Math.round(dur * R); let F = 0;
-    while (F < total) { const { N } = snapHz(freqAtT(c, F / R, dur), R); cycles.push({ F, N }); F += 2 * N; }
+    if (c.wave !== 'sine') while (F < total) { const s = snapHz(freqAtT(c, F / R, dur), R); cycles.push({ F, L: s.L, on: s.on }); F += s.L; }
     return { cycles, total };
   }
 
   const Engine = (() => {
-    let ctx, osc, pulseGain, master, raf, cfg, running = false, wake = null, onEnd, els;
+    let ctx, osc, lfo, pulseGain, master, raf, cfg, running = false, wake = null, onEnd, els;
     let R, P, plan, dur, fi, lastTs, k, schedK, offset, lastKey, dropped, flashes, prevOn, firstTs, test, firstOn, lastOn;
+    let sine, phase, curHz, fadeIn, fadeOut;
     function schedulePulse(at, on) {
       const ramp = Math.min(0.005, on * 0.2);
       pulseGain.gain.setValueAtTime(0, at);
@@ -220,44 +237,59 @@ td.num, th.r { text-align: right; }
     }
     function frame(ts) {
       if (!running) return;
+      let adv = 0;
       if (lastTs == null) { lastTs = ts; firstTs = ts; fi = 0; }
       else {
-        const d = ts - lastTs, steps = Math.max(1, Math.round(d / P));
-        if (steps > 1) dropped += steps - 1;
-        if (steps === 1) P += (d - P) * 0.02;            /* track the real refresh slowly */
-        fi += steps; lastTs = ts;
+        const d = ts - lastTs; adv = Math.max(1, Math.round(d / P));
+        if (adv > 1) dropped += adv - 1;
+        if (adv === 1) P += (d - P) * 0.02;            /* track the real refresh slowly */
+        fi += adv; lastTs = ts;
       }
       if (fi >= plan.total) return stop(true);
-      const cy = plan.cycles;
-      while (k + 1 < cy.length && cy[k + 1].F <= fi) k++;
-      const c = cy[k], on = cfg.light && (fi - c.F) < c.N;
       const tS = fi / R;
-      const env = test ? 1 : (0.3 + 0.7 * clamp(tS / LIGHT_FADE_IN, 0, 1)) * clamp((dur - tS) / FADE_OUT, 0, 1);
-      const key = on ? Math.round(env * 100) : -1;
-      if (key !== lastKey) { els.light.style.opacity = on ? String(env) : '0'; lastKey = key; }
-      if (on && !prevOn) { flashes++; if (firstOn == null) firstOn = ts; lastOn = ts; }
-      prevOn = on;
-      /* sound: schedule each pulse at the predicted display time of its flash, up to 0.5 s ahead */
-      if (ctx) {
-        const o = ctx.currentTime - ts / 1000;
-        offset = offset == null ? o : offset + (o - offset) * 0.05;
-        const lead = (ctx.outputLatency || 0) + (ctx.baseLatency || 0) + store.get('lightDelay', 0) / 1000;
-        while (schedK < cy.length) {
-          const s = cy[schedK], disp = (ts + (s.F - fi) * P) / 1000, at = disp + offset - lead;
-          if (at > ctx.currentTime + 0.5) break;
-          if (at > ctx.currentTime + 0.003 && cfg.sound) schedulePulse(at, s.N / R);
-          schedK++;
+      const env = test ? 1 : (0.3 + 0.7 * clamp(tS / fadeIn, 0, 1)) * clamp((dur - tS) / fadeOut, 0, 1);
+      let hudExtra;
+      if (sine) {
+        curHz = freqAtT(cfg, tS, dur);
+        const before = phase; phase += curHz * adv / R;
+        if (fi === 0 || Math.floor(phase) > Math.floor(before)) { flashes++; if (firstOn == null) firstOn = ts; lastOn = ts; }
+        const level = cfg.light ? env * (0.5 - 0.5 * Math.cos(2 * Math.PI * phase)) : 0;
+        const key = Math.round(level * 200);
+        if (key !== lastKey) { els.light.style.opacity = String(level); lastKey = key; }
+        hudExtra = 'sine';
+      } else {
+        const cy = plan.cycles;
+        while (k + 1 < cy.length && cy[k + 1].F <= fi) k++;
+        const c = cy[k], on = cfg.light && (fi - c.F) < c.on;
+        curHz = R / c.L;
+        const key = on ? Math.round(env * 100) : -1;
+        if (key !== lastKey) { els.light.style.opacity = on ? String(env) : '0'; lastKey = key; }
+        if (on && !prevOn) { flashes++; if (firstOn == null) firstOn = ts; lastOn = ts; }
+        prevOn = on;
+        hudExtra = c.on + '+' + (c.L - c.on) + ' frames';
+        /* sound: schedule each pulse at the predicted display time of its flash, up to 0.5 s ahead */
+        if (ctx) {
+          const o = ctx.currentTime - ts / 1000;
+          offset = offset == null ? o : offset + (o - offset) * 0.05;
+          const lead = (ctx.outputLatency || 0) + (ctx.baseLatency || 0) + store.get('lightDelay', 0) / 1000;
+          while (schedK < cy.length) {
+            const s = cy[schedK], disp = (ts + (s.F - fi) * P) / 1000, at = disp + offset - lead;
+            if (at > ctx.currentTime + 0.5) break;
+            if (at > ctx.currentTime + 0.003 && cfg.sound) schedulePulse(at, s.on / R);
+            schedK++;
+          }
         }
       }
       if (els.time) {
-        const left = Math.max(0, dur - tS);
-        els.time.textContent = Math.floor(left / 60) + ':' + String(Math.floor(left % 60)).padStart(2, '0');
-        els.hz.textContent = fmtHz(R / (2 * c.N)) + ' Hz · ' + c.N + '+' + c.N + ' frames';
+        els.time.textContent = fmtTime(Math.max(0, Math.floor(dur - tS)));
+        els.hz.textContent = fmtHz(curHz) + ' Hz · ' + hudExtra;
       }
       raf = requestAnimationFrame(frame);
     }
     async function start(c, e, done, opts) {
-      cfg = c; els = e; onEnd = done; test = !!(opts && opts.test);
+      cfg = c; els = e; onEnd = done; test = !!(opts && opts.test); sine = cfg.wave === 'sine'; lfo = null;
+      fadeIn = cfg.fadeIn != null ? cfg.fadeIn : LIGHT_FADE_IN;
+      fadeOut = cfg.fadeOut != null ? cfg.fadeOut : FADE_OUT;
       if (!test) {
         const AC = window.AudioContext || window.webkitAudioContext;
         ctx = new AC({ latencyHint: 'interactive' });           /* created inside the tap, as iOS requires */
@@ -273,67 +305,132 @@ td.num, th.r { text-align: right; }
       if (!running) return;
       dur = cfg.min * 60; plan = buildPlan(cfg, R, dur);
       fi = 0; lastTs = null; k = 0; schedK = 0; offset = null; lastKey = null; dropped = 0; flashes = 0; prevOn = false; firstOn = lastOn = null;
+      phase = 0; curHz = freqAtT(cfg, 0, dur);
       if (ctx) {
         const t0 = ctx.currentTime + 0.05, vol = cfg.sound ? MAX_GAIN * (cfg.vol / 100) : 0;
-        const fadeIn = Math.min(AUDIO_FADE_IN, dur / 3), fadeOut = Math.min(FADE_OUT, dur / 3);
+        const aIn = Math.min(cfg.fadeIn != null ? cfg.fadeIn : AUDIO_FADE_IN, dur / 3), aOut = Math.min(fadeOut, dur / 3);
         master.gain.setValueAtTime(0, t0);
-        master.gain.linearRampToValueAtTime(vol, t0 + fadeIn);
-        master.gain.setValueAtTime(vol, t0 + dur - fadeOut);
+        master.gain.linearRampToValueAtTime(vol, t0 + aIn);
+        master.gain.setValueAtTime(vol, t0 + dur - aOut);
         master.gain.linearRampToValueAtTime(0, t0 + dur);
+        if (sine) {
+          /* drone: loudness = 0.5 + 0.5·sin(2π f t), with f following the same schedule as the light */
+          pulseGain.gain.setValueAtTime(0.5, ctx.currentTime);
+          lfo = ctx.createOscillator(); lfo.type = 'sine';
+          const depth = ctx.createGain(); depth.gain.value = 0.5;
+          lfo.connect(depth).connect(pulseGain.gain);
+          const n = Math.max(2, Math.ceil(dur * 20)), curve = new Float32Array(n);
+          for (let i = 0; i < n; i++) curve[i] = freqAtT(cfg, (i / (n - 1)) * dur, dur);
+          lfo.frequency.setValueCurveAtTime(curve, t0, dur);
+          lfo.start(t0);
+        }
       }
       try { if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then(w => { wake = w; }).catch(() => {}); } catch (err) {}
       raf = requestAnimationFrame(frame);
     }
-    function stop(completed) {
+    function stop(completed, why) {
       if (!running) return;
       running = false;
       cancelAnimationFrame(raf);
       const elapsedS = lastTs != null ? (lastTs - firstTs) / 1000 : 0;
       if (ctx) {
         try { master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(0, ctx.currentTime, 0.03); pulseGain.gain.cancelScheduledValues(ctx.currentTime + 0.1); } catch (err) {}
-        const c = ctx, o = osc; setTimeout(() => { try { o.stop(); c.close(); } catch (err) {} }, 250);
+        const c = ctx, o = osc, l = lfo;
+        setTimeout(() => { try { o.stop(); } catch (err) {} try { if (l) l.stop(); } catch (err) {} try { c.close(); } catch (err) {} }, 250);
       }
       if (els && els.light) els.light.style.opacity = '0';
       try { if (wake) wake.release(); } catch (err) {} wake = null;
-      const doneFrames = Math.min(fi || 0, plan ? plan.total : 0);
+      const doneFrames = Math.min(fi || 0, plan ? plan.total : 0), tS = doneFrames / (R || 60);
       onEnd && onEnd({
-        completed: !!completed, minutes: Math.round((doneFrames / (R || 60)) / 6) / 10,
-        endHz: R && plan ? R / (2 * plan.cycles[Math.min(k || 0, plan.cycles.length - 1)].N) : cfg.f1,
+        completed: !!completed, reason: completed ? 'complete' : (why || 'tap'),
+        tS, minutes: Math.round(tS / 6) / 10,
+        endHz: curHz != null ? curHz : cfg.f1,
         refresh: R, dropped: dropped || 0, flashes: flashes || 0, elapsedS,
         measuredHz: flashes > 1 && lastOn > firstOn ? (flashes - 1) / ((lastOn - firstOn) / 1000) : 0
       });
     }
     return { start, stop, isRunning: () => running };
   })();
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && Engine.isRunning()) Engine.stop(false); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && Engine.isRunning()) Engine.stop(false, 'hidden'); });
 
   /* ---------- screens ---------- */
   let screenHz = null;
   measureRefresh().then(r => { screenHz = r; const n = document.getElementById('screen-hz'); if (n) n.textContent = 'Screen ' + Math.round(r) + ' Hz'; });
-  const snapText = hz => screenHz ? fmtHz(snapHz(hz, screenHz).hz) : fmtHz(hz);
+  const snapText = (hz, wave) => wave === 'sine' || !screenHz ? fmtHz(hz) : fmtHz(snapHz(hz, screenHz).hz);
   function navLink(icon, label, onclick) { return el('button', { class: 'navlink', type: 'button', onclick }, [el('span', { class: 'icon', 'aria-hidden': 'true', text: icon }), label]); }
   function header() {
     return el('header', { class: 'topbar' }, [
       el('h1', { class: 'wordmark', text: 'Slab' }),
-      el('nav', { class: 'nav', 'aria-label': 'Main' }, [navLink('◐', 'Flicker test', flickerTest), navLink('↺', 'Log', logScreen), navLink('⚙︎', 'Settings', settings)])
+      el('nav', { class: 'nav', 'aria-label': 'Main' }, [navLink('◎', 'Pattern finder', () => finder()), navLink('◐', 'Flicker test', () => flickerTest()), navLink('↺', 'Log', logScreen), navLink('⚙︎', 'Settings', settings)])
     ]);
+  }
+  /* run an overlay session; tap anywhere stops it */
+  function overlay(cfg, noteText, onDone) {
+    const light = el('div', { class: 'light', style: 'background:' + COLORS[cfg.color][1] });
+    const time = el('span'), hz = el('span');
+    const hud = el('div', { class: 'hud' }, [time, hz]);
+    const note = el('div', { class: 'tapnote', text: noteText });
+    const root = el('div', { class: 'session', role: 'application', 'aria-label': 'Session running. ' + noteText }, [light, note, hud]);
+    document.body.appendChild(root);
+    setTimeout(() => { hud.classList.add('dim'); note.classList.add('dim'); }, 4000);
+    const tapStop = e => { e.preventDefault(); Engine.stop(false, 'tap'); };
+    root.addEventListener('pointerdown', tapStop);
+    root.addEventListener('touchstart', e => e.preventDefault(), { passive: false });  /* no ghost click onto the next screen */
+    Engine.start(cfg, { light, time, hz }, res => { root.removeEventListener('pointerdown', tapStop); root.remove(); onDone(res); });
+  }
+
+  /* ---------- pattern finder data ---------- */
+  const RANGES = { wide: ['6–16 Hz', 6, 16], full: ['4–20 Hz', 4, 20], alpha: ['8–13 Hz', 8, 13] };
+  function yours() {
+    const hits = store.get('finder', []).filter(e => e.result === 'pattern');
+    if (!hits.length) return null;
+    const hzs = hits.map(e => e.hz);
+    return { hz: Math.round(median(hzs) * 10) / 10, n: hits.length, lo: Math.min(...hzs), hi: Math.max(...hzs), last: hits[hits.length - 1] };
+  }
+  function rangeOf(st) {
+    const y = yours();
+    if (st.range === 'around' && y) return { lo: Math.max(1, Math.round((y.hz - 2) * 4) / 4), hi: y.hz + 2, label: 'Around ' + fmtHz(y.hz) + ' Hz' };
+    const r = RANGES[st.range] || RANGES.wide;
+    return { lo: r[1], hi: r[2], label: r[0] };
+  }
+  function finderSteps(st, R) {
+    const { lo, hi } = rangeOf(st); let list = [];
+    if (st.wave === 'square') {
+      const Lmax = Math.floor(R / lo), Lmin = Math.max(2, Math.ceil(R / hi));
+      for (let L = Lmax; L >= Lmin; L--) list.push(R / L);
+    } else {
+      const step = hi - lo <= 5 ? 0.25 : 0.5;
+      for (let x = lo; x <= hi + 1e-9; x += step) list.push(Math.round(x * 100) / 100);
+    }
+    return st.dir === 'down' ? list.reverse() : list;
   }
 
   function home() {
     if (!store.get('acknowledged', false)) return safety(true);
     const manual = Object.assign({}, DEFAULT_MANUAL, store.get('manual', {}));
     const sessions = store.get('log', []);
-    const startWith = cfg => { const o = outputs(); if (!o.sound && !o.light) { offNote.hidden = false; return; } before(Object.assign({}, cfg, o)); };
+    const y = yours();
+    const startWith = cfg => { const o = outputs(); if (!o.sound && !o.light) { offNote.hidden = false; return; } before(Object.assign({}, cfg, o, { wave: cfg.wave || store.get('wave', 'square') })); };
     const offNote = el('p', { class: 'small', hidden: true, text: 'Sound and light are both off. Switch at least one on to start a session.' });
     const out = outputs();
     const setOut = (k, v) => { const o = Object.assign({ sound: true, light: true }, store.get('outputs', {})); o[k] = v; store.set('outputs', o); offNote.hidden = true; };
     const presetRow = p => el('button', { class: 'preset', type: 'button', onclick: () => startWith(p) }, [
       el('span', { class: 'name', text: p.name }),
       el('span', { class: 'desc muted small', text: p.desc }),
-      el('span', { class: 'num small' }, [el('i', { class: 'swatch', style: 'background:' + COLORS[p.color][1] }), (p.f0 === p.f1 ? p.f0 : p.f0 + '→' + p.f1) + ' Hz · ' + p.min + ':00']),
+      el('span', { class: 'num small' }, [el('i', { class: 'swatch', style: 'background:' + COLORS[p.color][1] }), (p.f0 === p.f1 ? fmtHz(p.f0) : p.f0 + '→' + p.f1) + ' Hz' + (p.wave ? ' ' + p.wave : '') + ' · ' + p.min + ':00']),
       el('span', { class: 'arrow', 'aria-hidden': 'true', text: '→' })
     ]);
     const set = (k, v) => { manual[k] = v; store.set('manual', manual); };
+    const rows = [
+      el('button', { class: 'preset lead', type: 'button', onclick: () => finder() }, [
+        el('span', { class: 'name', text: 'Pattern finder' }),
+        el('span', { class: 'desc muted small', text: 'Steps slowly through frequencies. Tap the moment you see patterns and it records where. Start here.' }),
+        el('span', { class: 'num small', text: y ? 'found ' + fmtHz(y.hz) + ' Hz · ' + y.n + (y.n === 1 ? ' hit' : ' hits') : 'sweep · tap to mark' }),
+        el('span', { class: 'arrow', 'aria-hidden': 'true', text: '→' })
+      ])
+    ];
+    if (y) rows.push(presetRow({ id: 'yours', name: 'Your frequency', desc: 'Held at the frequency the pattern finder found for you, median of ' + y.n + (y.n === 1 ? ' run' : ' runs') + '.', f0: y.hz, f1: y.hz, min: 10, color: y.last.color, tone: 200, wave: y.last.wave, eyesClosed: true }));
+    PRESETS.forEach(p => rows.push(presetRow(p)));
     show(el('main', { class: 'screen' }, [
       header(),
       el('div', { class: 'meta' }, [
@@ -344,13 +441,14 @@ td.num, th.r { text-align: right; }
       el('section', { class: 'outputs' }, [
         el('div', { class: 'field' }, [el('span', { class: 'label', text: 'Sound' }), seg('g-sound', [[true, 'On'], [false, 'Off']], out.sound, v => setOut('sound', v))]),
         el('div', { class: 'field' }, [el('span', { class: 'label', text: 'Light' }), seg('g-light', [[true, 'On'], [false, 'Off']], out.light, v => setOut('light', v))]),
+        el('div', { class: 'field' }, [el('span', { class: 'label', text: 'Wave' }), seg('g-wave', WAVES, store.get('wave', 'square'), v => store.set('wave', v))]),
         el('div', { class: 'outvol' }, [slider('g-vol', 'Volume', 0, 100, 5, out.vol, v => v + '%', v => store.set('volume', v))]),
         el('span', { class: 'small muted outnote', text: 'Applies to every session.' })
       ]),
       offNote,
-      el('section', { class: 'rows' }, PRESETS.map(presetRow)),
+      el('section', { class: 'rows' }, rows),
       el('section', { class: 'panel' }, [
-        el('div', { class: 'spread' }, [el('span', { class: 'label', text: 'Manual' }), el('span', { class: 'small muted', text: 'Frequencies snap to what your screen can flash cleanly. Set brightness with your device.' })]),
+        el('div', { class: 'spread' }, [el('span', { class: 'label', text: 'Manual' }), el('span', { class: 'small muted', text: 'Square snaps to what your screen can flash cleanly; sine runs at any rate. Set brightness with your device.' })]),
         el('div', { class: 'grid' }, [
           slider('m-f0', 'Pulse start', 1, 40, 0.5, manual.f0, v => fmtHz(v) + ' Hz', v => set('f0', v)),
           slider('m-f1', 'Pulse end', 1, 40, 0.5, manual.f1, v => fmtHz(v) + ' Hz', v => set('f1', v)),
@@ -359,7 +457,7 @@ td.num, th.r { text-align: right; }
         ]),
         el('div', { class: 'field' }, [el('span', { class: 'label', text: 'Light colour' }),
           seg('m-color', Object.entries(COLORS).map(([k, [n, c]]) => [k, n, el('i', { class: 'swatch', style: 'background:' + c })]), manual.color, v => set('color', v), 'colors')]),
-        el('div', { class: 'row' }, [el('button', { class: 'btn btn-primary btn-big', type: 'button', onclick: () => { const m = Object.assign({}, manual); delete m.sound; delete m.light; delete m.vol; startWith(Object.assign({ id: 'manual', name: 'Manual' }, m)); } }, ['Start manual', el('span', { class: 'icon', text: '→' })])])
+        el('div', { class: 'row' }, [el('button', { class: 'btn btn-primary btn-big', type: 'button', onclick: () => { const m = Object.assign({}, manual); delete m.sound; delete m.light; delete m.vol; delete m.wave; startWith(Object.assign({ id: 'manual', name: 'Manual' }, m)); } }, ['Start manual', el('span', { class: 'icon', text: '→' })])])
       ])
     ]));
   }
@@ -378,12 +476,12 @@ td.num, th.r { text-align: right; }
     const go = el('button', { class: 'btn btn-primary btn-big', type: 'button', disabled: true }, ['Begin', el('span', { class: 'icon', text: '→' })]);
     st.onChange = () => { go.disabled = !(st.calm && st.alert); };
     go.addEventListener('click', () => session(cfg, { calm: st.calm, alert: st.alert }));
-    const hz = cfg.f0 === cfg.f1 ? snapText(cfg.f0) + ' Hz' : snapText(cfg.f0) + ' → ' + snapText(cfg.f1) + ' Hz';
+    const hz = cfg.f0 === cfg.f1 ? snapText(cfg.f0, cfg.wave) + ' Hz' : snapText(cfg.f0, cfg.wave) + ' → ' + snapText(cfg.f1, cfg.wave) + ' Hz';
     show(el('main', { class: 'screen' }, [
       el('div', { class: 'spread' }, [el('h1', { class: 'h1', text: cfg.name }), el('button', { class: 'btn btn-quiet', type: 'button', text: '← Back', onclick: home })]),
-      el('p', { class: 'num muted', text: hz + ' · ' + cfg.min + ':00 · ' + COLORS[cfg.color][0].toLowerCase() + ' · tone ' + cfg.tone + ' Hz' + (cfg.sound === false ? ' · sound off' : '') + (cfg.light === false ? ' · light off' : '') }),
+      el('p', { class: 'num muted', text: hz + ' ' + cfg.wave + ' · ' + cfg.min + ':00 · ' + COLORS[cfg.color][0].toLowerCase() + ' · tone ' + cfg.tone + ' Hz' + (cfg.sound === false ? ' · sound off' : '') + (cfg.light === false ? ' · light off' : '') }),
       el('p', { text: cfg.eyesClosed
-        ? 'Headphones in. Hold the tablet 20–30 cm from your face, close your eyes and let the light play on your eyelids. Tap anywhere to stop.'
+        ? 'Headphones in. Brightness to max, tablet against your face, eyes closed. Let the light play on your eyelids. Tap anywhere to stop.'
         : 'Headphones in, device brightness where you want it. Rest your eyes on the screen with a soft focus, or close them; light reaches you through your eyelids. Tap anywhere to stop.' }),
       el('p', { class: 'small muted', text: 'First, a quick reading. You’ll rate again afterwards, so the log shows what each session actually did.' }),
       ...ratings(st),
@@ -391,37 +489,166 @@ td.num, th.r { text-align: right; }
     ]));
   }
 
-  function session(cfg, pre) {
-    const light = el('div', { class: 'light', style: 'background:' + COLORS[cfg.color][1] });
-    const time = el('span'), hz = el('span');
-    const hud = el('div', { class: 'hud' }, [time, hz]);
-    const note = el('div', { class: 'tapnote', text: 'Tap anywhere to stop' });
-    const root = el('div', { class: 'session', role: 'application', 'aria-label': 'Session running. Tap anywhere to stop.' }, [light, note, hud]);
-    document.body.appendChild(root);
-    setTimeout(() => { hud.classList.add('dim'); note.classList.add('dim'); }, 4000);
-    const finish = res => {
-      root.removeEventListener('pointerdown', tapStop);
-      root.remove();
-      after(cfg, pre, res);
-    };
-    const tapStop = e => { e.preventDefault(); Engine.stop(false); };
-    root.addEventListener('pointerdown', tapStop);
-    root.addEventListener('touchstart', e => e.preventDefault(), { passive: false });  /* no ghost click onto the next screen */
-    Engine.start(cfg, { light, time, hz }, finish);
-  }
+  function session(cfg, pre) { overlay(cfg, 'Tap anywhere to stop', res => after(cfg, pre, res)); }
 
   function after(cfg, pre, res) {
     const st = { calm: null, alert: null };
     const save = el('button', { class: 'btn btn-primary btn-big', type: 'button', disabled: true }, ['Save to log', el('span', { class: 'icon', text: '→' })]);
     st.onChange = () => { save.disabled = !(st.calm && st.alert); };
-    const entry = () => ({ at: new Date().toISOString(), preset: cfg.id, name: cfg.name, f0: cfg.f0, f1: cfg.f1, color: cfg.color, planned: cfg.min, minutes: res.minutes, completed: res.completed, refresh: Math.round(res.refresh || 0), dropped: res.dropped, pre, post: { calm: st.calm, alert: st.alert } });
+    const entry = () => ({ at: new Date().toISOString(), preset: cfg.id, name: cfg.name, f0: cfg.f0, f1: cfg.f1, wave: cfg.wave, color: cfg.color, planned: cfg.min, minutes: res.minutes, completed: res.completed, refresh: Math.round(res.refresh || 0), dropped: res.dropped, pre, post: { calm: st.calm, alert: st.alert } });
     save.addEventListener('click', () => { const log = store.get('log', []); log.push(entry()); store.set('log', log); logScreen(); });
     show(el('main', { class: 'screen' }, [
-      el('h1', { class: 'h1', text: res.completed ? 'Complete' : 'Stopped' }),
-      el('p', { class: 'num muted', text: res.minutes + ' of ' + cfg.min + ' min · ended at ' + fmtHz(res.endHz) + ' Hz' }),
+      el('h1', { class: 'h1', text: res.completed ? 'Complete' : res.reason === 'hidden' ? 'Interrupted' : 'Stopped' }),
+      el('p', { class: 'num muted', text: res.minutes + ' of ' + cfg.min + ' min · ended at ' + fmtHz(res.endHz) + ' Hz ' + cfg.wave }),
       el('p', { class: 'small muted', text: 'Rate now, before the effect fades or your mind wanders off.' }),
       ...ratings(st),
       el('div', { class: 'row' }, [save, el('button', { class: 'btn btn-quiet', type: 'button', text: 'Discard', onclick: home })])
+    ]));
+  }
+
+  /* ---------- pattern finder ---------- */
+  function finder(sel) {
+    const st = Object.assign({ range: 'wide', hold: 20, dir: 'up', wave: 'square', color: 'red', sound: false }, store.get('finderSel', {}), sel || {});
+    const y = yours();
+    if (st.range === 'around' && !y) st.range = 'wide';
+    const save = () => store.set('finderSel', st);
+    const planLine = el('p', { class: 'num' }), stepsLine = el('p', { class: 'steps' }), warn = el('p', { class: 'small', hidden: true });
+    const go = el('button', { class: 'btn btn-primary btn-big', type: 'button', disabled: true }, ['Start sweep', el('span', { class: 'icon', text: '→' })]);
+    const describe = () => {
+      save();
+      if (!screenHz) { planLine.textContent = 'Measuring screen…'; stepsLine.textContent = ''; go.disabled = true; return; }
+      const steps = finderSteps(st, screenHz);
+      go.disabled = steps.length === 0;
+      planLine.textContent = steps.length ? steps.length + ' steps · ' + st.hold + ' s each · ' + fmtTime(steps.length * st.hold) + ' total' : 'No rates in this range';
+      stepsLine.textContent = steps.map(fmtHz).join(' · ') + ' Hz';
+      warn.hidden = !(st.wave === 'square' && steps.length < 6);
+      warn.textContent = 'A ' + Math.round(screenHz) + ' Hz screen can only flash ' + steps.length + ' clean square rates in this range. Sine gives finer steps.';
+    };
+    if (!screenHz) measureRefresh().then(r => { screenHz = r; describe(); });
+    const upd = k => v => { st[k] = v; describe(); };
+    const rangeOpts = Object.entries(RANGES).map(([k, [n]]) => [k, n]);
+    if (y) rangeOpts.push(['around', 'Around ' + fmtHz(y.hz)]);
+    go.addEventListener('click', () => {
+      const steps = finderSteps(st, screenHz); if (!steps.length) return;
+      const cfg = { id: 'finder', name: 'Pattern finder', steps, hold: st.hold, min: steps.length * st.hold / 60, color: st.color, tone: 200, wave: st.wave,
+        sound: st.sound, light: true, vol: store.get('volume', 40), fadeIn: 3, fadeOut: 2, f0: steps[0], f1: steps[steps.length - 1] };
+      overlay(cfg, 'Tap the moment you see patterns', res => finderResult(cfg, st, res));
+    });
+
+    const log = store.get('finder', []);
+    const confirmBox = el('div', { class: 'confirm', hidden: true }, [
+      el('p', { text: 'This deletes every pattern finder run on this tablet. It can’t be undone.' }),
+      el('div', { class: 'row' }, [el('button', { class: 'btn', type: 'button', text: 'Cancel', onclick: () => { confirmBox.hidden = true; } }),
+        el('button', { class: 'btn btn-danger', type: 'button', text: 'Delete history', onclick: () => { store.set('finder', []); finder(); } })])
+    ]);
+    const holdAt = () => {
+      const o = outputs(); if (!o.sound && !o.light) o.light = true;
+      before(Object.assign({ id: 'yours', name: 'Your frequency', f0: y.hz, f1: y.hz, min: 10, color: y.last.color, tone: 200, eyesClosed: true }, o, { wave: y.last.wave }));
+    };
+    const note = (t, b) => el('div', {}, [el('h2', { text: t }), el('p', { class: 'muted', text: b })]);
+    const sweepText = e => fmtHz(e.lo) + '–' + fmtHz(e.hi) + ' ' + (e.dir === 'down' ? '↓' : '↑') + ' ' + e.wave + ' ' + (COLORS[e.color] ? COLORS[e.color][0].toLowerCase() : '');
+
+    show(el('main', { class: 'screen' }, [
+      el('div', { class: 'spread' }, [el('h1', { class: 'h1', text: 'Pattern finder' }), el('button', { class: 'btn btn-quiet', type: 'button', text: '← Back', onclick: home })]),
+      el('p', { class: 'muted', text: 'The light holds each frequency for a while, then steps to the next. The moment you see anything that isn’t just the light pulsing, tap the screen. It stops and records where you were.' }),
+      y ? el('section', { class: 'summary' }, [
+        el('div', {}, [el('span', { class: 'label', text: 'Your pattern frequency' }), el('span', { class: 'huge', text: fmtHz(y.hz) }), el('span', { class: 'num muted small', text: 'Hz · median of ' + y.n + (y.n === 1 ? ' hit' : ' hits') + (y.n > 1 ? ' · range ' + fmtHz(y.lo) + '–' + fmtHz(y.hi) : '') })]),
+        el('div', {}, [
+          el('p', { class: 'small muted', text: y.n < 3 ? 'Run it at least three times, both directions, before trusting the number. If the hits cluster, it’s you; if they scatter, it’s noise.' : (y.hi - y.lo <= 2 ? 'Your hits cluster tightly. That’s a real sweet spot.' : 'Your hits are spread out. Try a narrow sweep around the median, or the other wave shape.') }),
+          el('div', { class: 'row' }, [
+            el('button', { class: 'btn btn-primary', type: 'button', onclick: holdAt }, ['Hold at ' + fmtHz(y.hz) + ' Hz', el('span', { class: 'icon', text: '→' })]),
+            el('button', { class: 'btn', type: 'button', text: 'Narrow sweep', onclick: () => finder(Object.assign({}, st, { range: 'around' })) })
+          ])
+        ])
+      ]) : null,
+      el('section', { class: 'notes' }, [
+        note('Screen', 'Brightness to maximum. Turn off Night Shift, True Tone, Auto-Brightness and Low Power Mode; each quietly dims the light or slows the screen.'),
+        note('Position', 'Dark room. Tablet flat against your face, eyes closed. Red gets through eyelids best, so it’s the default here.'),
+        note('What counts', 'Anything that isn’t the plain pulse: grids, checkerboards, spirals, rings, moving colour, shapes, a second colour. Tap as soon as you’re fairly sure. Don’t wait for vivid.'),
+        note('Square or sine', 'Square hits harder; sine is gentler. Some people respond to one and not the other, so run both.')
+      ]),
+      el('section', { class: 'panel' }, [
+        el('div', { class: 'field' }, [el('span', { class: 'label', text: 'Range' }), seg('f-range', rangeOpts, st.range, upd('range'))]),
+        el('div', { class: 'grid' }, [
+          el('div', { class: 'field' }, [el('span', { class: 'label', text: 'Wave' }), seg('f-wave', WAVES, st.wave, upd('wave'))]),
+          el('div', { class: 'field' }, [el('span', { class: 'label', text: 'Direction' }), seg('f-dir', [['up', 'Up ↑'], ['down', 'Down ↓']], st.dir, upd('dir'))]),
+          el('div', { class: 'field' }, [el('span', { class: 'label', text: 'Hold each step' }), seg('f-hold', [[10, '10 s'], [20, '20 s'], [30, '30 s']], st.hold, upd('hold'))]),
+          el('div', { class: 'field' }, [el('span', { class: 'label', text: 'Sound' }), seg('f-sound', [[false, 'Off'], [true, 'On']], st.sound, upd('sound'))])
+        ]),
+        el('div', { class: 'field' }, [el('span', { class: 'label', text: 'Light colour' }),
+          seg('f-color', Object.entries(COLORS).map(([k, [n, c]]) => [k, n, el('i', { class: 'swatch', style: 'background:' + c })]), st.color, upd('color'), 'colors')]),
+        planLine, stepsLine, warn,
+        el('div', { class: 'row' }, [go])
+      ]),
+      log.length ? el('div', { class: 'table-wrap' }, [el('table', {}, [
+        el('thead', {}, [el('tr', {}, ['When', 'Sweep', 'Result', 'Vivid', 'Seen'].map(h => el('th', { text: h })))]),
+        el('tbody', {}, [...log].reverse().map(e => el('tr', {}, [
+          el('td', { class: 'num', text: new Date(e.at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) }),
+          el('td', { class: 'num', text: sweepText(e) }),
+          el('td', { class: 'num', text: e.result === 'pattern' ? fmtHz(e.hz) + ' Hz' + (e.prevHz != null ? ' (or ' + fmtHz(e.prevHz) + ')' : '') : 'nothing' }),
+          el('td', { class: 'num', text: e.vivid ? e.vivid + '/5' : '—' }),
+          el('td', { class: 'wrap', text: e.note || '' })
+        ])))
+      ])]) : null,
+      log.length ? el('div', {}, [el('button', { class: 'btn btn-quiet', type: 'button', text: 'Delete finder history', onclick: () => { confirmBox.hidden = false; } })]) : null,
+      confirmBox
+    ]));
+    describe();
+  }
+
+  function finderResult(cfg, st, res) {
+    const n = cfg.steps.length, idx = clamp(Math.floor(res.tS / cfg.hold), 0, n - 1), hz = cfg.steps[idx];
+    const inStep = res.tS - idx * cfg.hold, prevHz = idx > 0 ? cfg.steps[idx - 1] : null, early = inStep < 5 && prevHz != null;
+    const { lo, hi } = rangeOf(st);
+    const base = { at: new Date().toISOString(), wave: cfg.wave, color: cfg.color, lo, hi, dir: st.dir, hold: cfg.hold, sound: cfg.sound };
+    const push = e => { const log = store.get('finder', []); log.push(Object.assign({}, base, e)); store.set('finder', log); };
+    const again = el('button', { class: 'btn', type: 'button', text: 'Run again', onclick: () => finder() });
+    const back = el('button', { class: 'btn btn-quiet', type: 'button', text: 'Discard', onclick: () => finder() });
+
+    if (res.reason === 'hidden') {
+      return show(el('main', { class: 'screen' }, [
+        el('h1', { class: 'h1', text: 'Interrupted' }),
+        el('p', { class: 'muted', text: 'The app went to the background, so the sweep stopped. Nothing was recorded.' }),
+        el('div', { class: 'row' }, [el('button', { class: 'btn btn-primary btn-big', type: 'button', text: 'Back to finder', onclick: () => finder() })])
+      ]));
+    }
+    if (res.completed) {
+      return show(el('main', { class: 'screen' }, [
+        el('h1', { class: 'h1', text: 'No tap' }),
+        el('p', { class: 'num muted', text: 'Swept ' + fmtHz(cfg.steps[0]) + ' → ' + fmtHz(cfg.steps[n - 1]) + ' Hz ' + cfg.wave + ', ' + fmtTime(n * cfg.hold) + '.' }),
+        el('p', { class: 'muted', text: 'Saving “nothing” matters too: it tells you which settings don’t work for you. Next, try the other wave shape, or a 30 s hold.' }),
+        el('div', { class: 'row' }, [el('button', { class: 'btn btn-primary btn-big', type: 'button', onclick: () => { push({ result: 'none', hz: null }); finder(); } }, ['Save: saw nothing', el('span', { class: 'icon', text: '→' })]), back])
+      ]));
+    }
+    const s = { what: null, vivid: null };
+    const noteIn = el('input', { type: 'text', placeholder: 'What did you see? (optional)', 'aria-label': 'What did you see?' });
+    const vividBox = el('div', { class: 'rate', hidden: true }, [
+      el('span', { class: 'label', text: 'How vivid?' }),
+      seg('fr-vivid', [1, 2, 3, 4, 5].map(i => [i, String(i)]), null, v => { s.vivid = v; refresh(); }, 'scale5'),
+      el('div', { class: 'ends small muted' }, [el('span', { text: '← faint hint' }), el('span', { text: 'unmistakable →' })]),
+      noteIn
+    ]);
+    const saveBtn = el('button', { class: 'btn btn-primary btn-big', type: 'button', disabled: true }, ['Save', el('span', { class: 'icon', text: '→' })]);
+    const refresh = () => {
+      vividBox.hidden = s.what !== 'pattern';
+      saveBtn.disabled = !(s.what === 'other' || (s.what === 'pattern' && s.vivid));
+      saveBtn.firstChild.textContent = s.what === 'other' ? 'Back to finder' : 'Save';
+    };
+    saveBtn.addEventListener('click', () => {
+      if (s.what === 'pattern') push({ result: 'pattern', hz, prevHz: early ? prevHz : null, inStep: Math.round(inStep), vivid: s.vivid, note: noteIn.value.trim() });
+      finder();
+    });
+    show(el('main', { class: 'screen' }, [
+      el('span', { class: 'label', text: 'Tapped at' }),
+      el('div', { class: 'huge', text: fmtHz(hz) + ' Hz' }),
+      el('p', { class: 'num muted', text: cfg.wave + ' · step ' + (idx + 1) + ' of ' + n + ' · ' + Math.round(inStep) + ' s into it' }),
+      early ? el('p', { class: 'small', text: 'You tapped early in this step, so the patterns may have started during the ' + fmtHz(prevHz) + ' Hz step before it. Both get saved.' }) : null,
+      el('div', { class: 'rate' }, [
+        el('span', { class: 'label', text: 'What happened?' }),
+        seg('fr-what', [['pattern', 'Saw patterns'], ['other', 'Stopped for another reason']], null, v => { s.what = v; refresh(); })
+      ]),
+      vividBox,
+      el('div', { class: 'row' }, [saveBtn, again])
     ]));
   }
 
@@ -449,7 +676,7 @@ td.num, th.r { text-align: right; }
         el('tbody', {}, [...log].reverse().map(e => el('tr', {}, [
           el('td', { class: 'num', text: new Date(e.at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) }),
           el('td', { text: e.name + (e.completed ? '' : ' (stopped)') }),
-          el('td', { class: 'num', text: (e.f0 === e.f1 ? fmtHz(e.f0) : fmtHz(e.f0) + '→' + fmtHz(e.f1)) + ' Hz' }),
+          el('td', { class: 'num', text: (e.f0 === e.f1 ? fmtHz(e.f0) : fmtHz(e.f0) + '→' + fmtHz(e.f1)) + ' Hz' + (e.wave === 'sine' ? ' sine' : '') }),
           el('td', { class: 'num', text: String(e.minutes) }),
           el('td', { class: 'num', text: e.pre.calm + '→' + e.post.calm + '  ' + sign(d(e, 'calm')) }),
           el('td', { class: 'num', text: e.pre.alert + '→' + e.post.alert + '  ' + sign(d(e, 'alert')) })
@@ -466,7 +693,7 @@ td.num, th.r { text-align: right; }
       el('div', { class: 'spread' }, [el('h1', { class: 'h1', text: 'Settings' }), el('button', { class: 'btn btn-quiet', type: 'button', text: '← Back', onclick: home })]),
       el('section', { class: 'panel' }, [
         slider('s-delay', 'Light delay', 0, 300, 10, delay, v => v + ' ms', v => store.set('lightDelay', v)),
-        el('p', { class: 'small muted', text: 'Bluetooth headphones play sound a fraction of a second late. If the flash comes before the tone, raise this until they land together. Wired headphones: leave at 0.' })
+        el('p', { class: 'small muted', text: 'Bluetooth headphones play sound a fraction of a second late. If the flash comes before the tone, raise this until they land together. Wired headphones: leave at 0. (Square wave only; sine sound is a loosely matched swell.)' })
       ]),
       el('div', { class: 'row' }, [el('button', { class: 'btn', type: 'button', text: 'Read the safety notes', onclick: () => safety(false) })]),
       el('p', { class: 'small muted', text: 'Slab v' + VERSION + '. Everything stays on this tablet.' })
@@ -478,9 +705,9 @@ td.num, th.r { text-align: right; }
     show(el('main', { class: 'screen' }, [
       el('h1', { class: 'h1', text: 'Before you start' }),
       el('section', { class: 'notes' }, [
-        note('Hearing', 'Slab caps its own output at about a quarter of full scale and fades sound in over ten seconds. It can’t see your device volume, so set a hard ceiling: Settings → Sounds → Headphone Safety → Reduce Loud Audio, at 85 dB. Start with device volume around half.'),
-        note('Flicker', 'Flashing light between about 3 and 30 flashes per second can trigger seizures in people with photosensitivity, sometimes for the first time. Light fades in over 30 seconds. Stop if you feel strange, see unusual patterns that bother you, or get a headache.'),
-        note('Eyes', 'A tablet screen is far too dim to harm your eyes, even close up. Eyes closed is gentler and works well; light reaches you through your eyelids.'),
+        note('Hearing', 'Slab caps its own output at about a quarter of full scale and fades sound in. It can’t see your device volume, so set a hard ceiling: Settings → Sounds → Headphone Safety → Reduce Loud Audio, at 85 dB. Start with device volume around half.'),
+        note('Flicker', 'Flashing light between about 3 and 30 flashes per second can trigger seizures in people with photosensitivity, sometimes for the first time. Stop if you feel strange, see unusual patterns that bother you, or get a headache. The pattern finder starts at full strength after a 3 second fade, so skip it if you have any seizure history.'),
+        note('Eyes', 'A tablet screen is far too dim to harm your eyes, even pressed against your face. Eyes closed is gentler and works well; light reaches you through your eyelids.'),
         note('Stopping', 'Tap anywhere on the screen and everything stops at once. Leaving the app stops it too. Sessions are capped at 30 minutes.'),
         note('Not for', 'Don’t use while driving, operating anything, or in water.')
       ]),
@@ -488,20 +715,19 @@ td.num, th.r { text-align: right; }
     ]));
   }
 
-  /* Flicker test: light only, 10 s, then the real numbers. Nothing is logged. */
+  /* Flicker test: square light only, 10 s, then the real numbers. Nothing is logged. */
   function flickerTest(prev) {
-    const st = Object.assign({ hz: 10, color: 'warm' }, prev ? prev.sel : {});
-    const R0 = screenHz;
+    const st = Object.assign({ hz: 10, color: 'red' }, prev ? prev.sel : {});
     const plan = el('p', { class: 'num' });
     const describe = () => {
       if (!screenHz) { plan.textContent = 'Measuring screen…'; return; }
-      const { N, hz } = snapHz(st.hz, screenHz);
-      plan.textContent = 'Screen ' + fmtHz(screenHz) + ' Hz → ' + N + ' frames on, ' + N + ' off → ' + fmtHz(hz) + ' Hz';
+      const { L, on, hz } = snapHz(st.hz, screenHz);
+      plan.textContent = 'Screen ' + fmtHz(screenHz) + ' Hz → ' + on + ' frames on, ' + (L - on) + ' off → ' + fmtHz(hz) + ' Hz';
     };
-    if (!R0) measureRefresh().then(r => { screenHz = r; describe(); });
+    if (!screenHz) measureRefresh().then(r => { screenHz = r; describe(); });
     describe();
     const result = prev && prev.res ? (() => {
-      const r = prev.res, target = r.refresh / (2 * snapHz(st.hz, r.refresh).N);
+      const r = prev.res, target = r.refresh / snapHz(st.hz, r.refresh).L;
       const err = target ? Math.abs(r.measuredHz - target) / target : 1;
       const clean = r.dropped === 0 && err < 0.03;
       const line = (k, v) => el('div', {}, [el('span', { class: 'label', text: k }), el('span', { class: 'big', text: v })]);
@@ -519,16 +745,16 @@ td.num, th.r { text-align: right; }
       const root = el('div', { class: 'session', role: 'application', 'aria-label': 'Flicker test running. Tap anywhere to stop.' }, [light, note]);
       document.body.appendChild(root);
       setTimeout(() => note.classList.add('dim'), 2000);
-      const tapStop = e => { e.preventDefault(); Engine.stop(false); };
+      const tapStop = e => { e.preventDefault(); Engine.stop(false, 'tap'); };
       root.addEventListener('pointerdown', tapStop);
       root.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
-      Engine.start({ f0: st.hz, f1: st.hz, min: 10 / 60, color: st.color, light: true, sound: false }, { light }, res => {
+      Engine.start({ f0: st.hz, f1: st.hz, min: 10 / 60, color: st.color, light: true, sound: false, wave: 'square' }, { light }, res => {
         root.remove(); flickerTest({ sel: { hz: st.hz, color: st.color }, res });
       }, { test: true });
     };
     show(el('main', { class: 'screen' }, [
       el('div', { class: 'spread' }, [el('h1', { class: 'h1', text: 'Flicker test' }), el('button', { class: 'btn btn-quiet', type: 'button', text: '← Back', onclick: home })]),
-      el('p', { class: 'muted', text: 'Ten seconds of light only, full colour on, pure black off. Afterwards you get the measured rate and any dropped frames, so you can check the flicker is clean on this screen.' }),
+      el('p', { class: 'muted', text: 'Ten seconds of square-wave light only, full colour on, pure black off. Afterwards you get the measured rate and any dropped frames, so you can check the flicker is clean on this screen.' }),
       el('div', { class: 'field' }, [el('span', { class: 'label', text: 'Frequency' }),
         seg('t-hz', [5, 7.5, 10, 12, 15, 20].map(h => [h, fmtHz(h) + ' Hz']), st.hz, v => { st.hz = v; describe(); })]),
       el('div', { class: 'field' }, [el('span', { class: 'label', text: 'Colour' }),
@@ -539,7 +765,7 @@ td.num, th.r { text-align: right; }
     ]));
   }
 
-  window.Slab = { Engine, PRESETS, version: VERSION, store, snapHz, buildPlan, measureRefresh };
+  window.Slab = { Engine, PRESETS, version: VERSION, store, snapHz, buildPlan, measureRefresh, finderSteps };
   home();
 })();
 </script>
